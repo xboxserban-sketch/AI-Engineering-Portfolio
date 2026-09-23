@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+websockets
+pydantic
+pydantic-settings
+openai
+httpx
+pytest
+pytest-asyncio
