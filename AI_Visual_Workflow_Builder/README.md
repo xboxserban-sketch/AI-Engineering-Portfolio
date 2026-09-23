@@ -1,5 +1,7 @@
 # AI Visual Workflow Builder
 
+![AI Workflow Builder UI](banner.jpg)
+
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 
 A modern, robust visual drag-and-drop AI workflow builder (like Zapier/Make.com but for AI). Users create workflows by dragging AI nodes onto a canvas and connecting them.

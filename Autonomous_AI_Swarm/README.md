@@ -1,5 +1,7 @@
 # Autonomous AI Swarm
 
+![AI Swarm Command Center](banner.jpg)
+
 ## Multi-Agent Architecture
 This project implements an Autonomous AI Swarm - a team of specialized AI agents that communicate in real-time to solve complex tasks. 
 
