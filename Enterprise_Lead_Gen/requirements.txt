@@ -1,0 +1,7 @@
+googlemaps
+playwright
+beautifulsoup4
+pandas
+sqlalchemy
+rich
+python-dotenv

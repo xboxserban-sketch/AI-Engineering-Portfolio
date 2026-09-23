@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>AutoPilot AI – Smart Car Assistant</title>
+  <meta name="description" content="Asistent inteligent pentru mașina ta. HUD live, estimare autonomie, pornire de la distanță, eco-score și analiză trip." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Particle Background -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- App Shell -->
+  <div class="app-shell" id="appShell">
+
+    <!-- === LOCK SCREEN === -->
+    <div class="screen active" id="screenLock">
+      <div class="lock-bg"></div>
+      <div class="lock-content">
+        <div class="lock-logo">
+          <div class="logo-ring">
+            <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="ring-track"/><circle cx="50" cy="50" r="45" class="ring-progress" id="lockRingProgress"/></svg>
+            <span class="logo-icon-big">🚗</span>
+          </div>
+          <h1 class="app-name">AutoPilot <span class="ai-text">AI</span></h1>
+          <p class="app-sub">Smart Car Assistant</p>
+        </div>
+        <div class="lock-car-info" id="lockCarInfo">
+          <div class="car-display">
+            <div class="car-brand-badge" id="carBrandBadge">BMW</div>
+            <div class="car-model-text" id="carModelText">Configurează mașina</div>
+          </div>
+        </div>
+        <button class="unlock-btn" id="unlockBtn" onclick="unlockApp()">
+          <span class="unlock-icon">🔓</span>
+          <span>Deschide AutoPilot</span>
+        </button>
+        <div class="lock-status-row">
+          <div class="status-pill" id="lockGpsStatus"><span>📍</span> GPS</div>
+          <div class="status-pill active" id="lockEngineStatus"><span>⚡</span> Motor Oprit</div>
+          <div class="status-pill" id="lockRangeStatus"><span>⛽</span> -- km</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === MAIN DASHBOARD === -->
+    <div class="screen" id="screenDash">
+
+      <!-- Nav Bar -->
+      <nav class="nav-bar">
+        <button class="nav-btn active" onclick="showTab('tabDash', this)" id="navDash">
+          <span>🏠</span><span class="nav-label">Acasă</span>
+        </button>
+        <button class="nav-btn" onclick="showTab('tabHUD', this)" id="navHUD">
+          <span>🏎️</span><span class="nav-label">HUD</span>
+        </button>
+        <button class="nav-btn" onclick="showTab('tabRemote', this)" id="navRemote">
+          <span>🔑</span><span class="nav-label">Remote</span>
+        </button>
+        <button class="nav-btn" onclick="showTab('tabTrip', this)" id="navTrip">
+          <span>📊</span><span class="nav-label">Trip</span>
+        </button>
+        <button class="nav-btn" onclick="showTab('tabSettings', this)" id="navSettings">
+          <span>⚙️</span><span class="nav-label">Setări</span>
+        </button>
+      </nav>
+
+      <!-- === TAB: HOME === -->
+      <div class="tab-content active" id="tabDash">
+        <div class="dash-header">
+          <div class="greeting" id="greetingText">Bună ziua!</div>
+          <div class="date-display" id="dateDisplay"></div>
+        </div>
+
+        <!-- Engine Status Card -->
+        <div class="engine-card" id="engineCard">
+          <div class="engine-left">
+            <div class="engine-indicator" id="engineIndicator">
+              <div class="engine-pulse" id="enginePulse"></div>
+              <span class="engine-icon">⚡</span>
+            </div>
+            <div>
+              <div class="engine-label">Motor</div>
+              <div class="engine-status" id="engineStatusText">OPRIT</div>
+            </div>
+          </div>
+          <button class="engine-toggle-btn" id="engineToggleBtn" onclick="toggleEngine()">
+            <span id="engineBtnText">PORNEȘTE</span>
+          </button>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row">
+          <div class="kpi-mini glass" id="kpiSpeed">
+            <div class="kpi-mini-val" id="kpiSpeedVal">0</div>
+            <div class="kpi-mini-unit">km/h</div>
+            <div class="kpi-mini-label">Viteză</div>
+          </div>
+          <div class="kpi-mini glass" id="kpiRange">
+            <div class="kpi-mini-val" id="kpiRangeVal">--</div>
+            <div class="kpi-mini-unit">km</div>
+            <div class="kpi-mini-label">Autonomie</div>
+          </div>
+          <div class="kpi-mini glass" id="kpiEco">
+            <div class="kpi-mini-val" id="kpiEcoVal">--</div>
+            <div class="kpi-mini-unit">/100</div>
+            <div class="kpi-mini-label">Eco Score</div>
+          </div>
+          <div class="kpi-mini glass" id="kpiConsumption">
+            <div class="kpi-mini-val" id="kpiConsumptionVal">--</div>
+            <div class="kpi-mini-unit">L/100</div>
+            <div class="kpi-mini-label">Consum</div>
+          </div>
+        </div>
+
+        <!-- Range Estimator -->
+        <div class="range-card glass">
+          <div class="range-header">
+            <h3>⛽ Estimare Autonomie</h3>
+            <button class="btn-edit-fuel" onclick="openFuelModal()">✏️ Actualizează</button>
+          </div>
+          <div class="range-visual">
+            <div class="fuel-gauge-container">
+              <div class="fuel-gauge">
+                <div class="fuel-level" id="fuelLevelBar"></div>
+                <div class="fuel-segments">
+                  <div class="fuel-seg"></div><div class="fuel-seg"></div>
+                  <div class="fuel-seg"></div><div class="fuel-seg"></div>
+                </div>
+              </div>
+              <div class="fuel-icons">
+                <span>E</span><span>F</span>
+              </div>
+            </div>
+            <div class="range-details">
+              <div class="range-big" id="rangeBigVal">--- km</div>
+              <div class="range-info-grid">
+                <div class="range-info-item">
+                  <span class="ri-label">Rezervor</span>
+                  <span class="ri-val" id="tankDisplay">-- L</span>
+                </div>
+                <div class="range-info-item">
+                  <span class="ri-label">Consum mediu</span>
+                  <span class="ri-val" id="avgConsDisplay">-- L/100</span>
+                </div>
+                <div class="range-info-item">
+                  <span class="ri-label">Cost ramas</span>
+                  <span class="ri-val" id="costRemainingDisplay">-- RON</span>
+                </div>
+                <div class="range-info-item">
+                  <span class="ri-label">Până la gol</span>
+                  <span class="ri-val" id="timeToEmptyDisplay">-- ore</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Range to destinations -->
+          <div class="dest-check">
+            <div class="dest-label">Poți ajunge la:</div>
+            <div class="dest-pills" id="destPills"></div>
+          </div>
+        </div>
+
+        <!-- Eco Tips Ticker -->
+        <div class="tips-ticker glass">
+          <span class="tips-icon">💡</span>
+          <div class="ticker-wrap">
+            <div class="ticker-text" id="tipsTicker">Configurează mașina în Setări pentru sfaturi personalizate...</div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <button class="qa-btn glass" onclick="showTab('tabHUD', document.getElementById('navHUD'))">
+            <span class="qa-icon">🏎️</span>
+            <span>Mod HUD</span>
+          </button>
+          <button class="qa-btn glass" onclick="showTab('tabRemote', document.getElementById('navRemote'))">
+            <span class="qa-icon">🔑</span>
+            <span>Remote</span>
+          </button>
+          <button class="qa-btn glass" onclick="startVoice()">
+            <span class="qa-icon">🎤</span>
+            <span>Voce AI</span>
+          </button>
+          <button class="qa-btn glass" onclick="saveParking()">
+            <span class="qa-icon">🅿️</span>
+            <span>Parcare</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- === TAB: HUD === -->
+      <div class="tab-content" id="tabHUD">
+        <div class="hud-container" id="hudContainer">
+          <div class="hud-bg"></div>
+
+          <button class="hud-fullscreen-btn" onclick="toggleHUDFullscreen()">⛶</button>
+
+          <!-- Speed Center -->
+          <div class="hud-speed-ring">
+            <svg viewBox="0 0 200 200" class="hud-ring-svg">
+              <circle cx="100" cy="100" r="88" class="hud-ring-track"/>
+              <circle cx="100" cy="100" r="88" class="hud-ring-fill" id="hudSpeedArc" stroke-dashoffset="553"/>
+            </svg>
+            <div class="hud-speed-center">
+              <div class="hud-speed-val" id="hudSpeedVal">0</div>
+              <div class="hud-speed-unit">km/h</div>
+            </div>
+          </div>
+
+          <!-- HUD Stats -->
+          <div class="hud-stats">
+            <div class="hud-stat">
+              <div class="hud-stat-val" id="hudEcoVal">--</div>
+              <div class="hud-stat-label">ECO</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-stat-val" id="hudRangeVal">--</div>
+              <div class="hud-stat-label">KM RĂMAȘI</div>
+            </div>
+            <div class="hud-stat">
+              <div class="hud-stat-val" id="hudTripVal">0.0</div>
+              <div class="hud-stat-label">KM TRIP</div>
+            </div>
+          </div>
+
+          <!-- Alert Banner -->
+          <div class="hud-alert" id="hudAlert" style="display:none">
+            <span id="hudAlertText"></span>
+          </div>
+
+          <!-- HUD Bottom -->
+          <div class="hud-bottom">
+            <div class="hud-time" id="hudTime"></div>
+            <button class="hud-gps-btn" id="hudGpsBtn" onclick="startGPS()">📍 Activează GPS</button>
+            <div class="hud-acc" id="hudAccStatus">📳 Acc: asteapta</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === TAB: REMOTE === -->
+      <div class="tab-content" id="tabRemote">
+        <div class="remote-container">
+          <div class="remote-header">
+            <h2 class="remote-title">🔑 Control de la Distanță</h2>
+            <div class="remote-connection">
+              <div class="conn-dot" id="connDot"></div>
+              <span id="connStatus">Deconectat</span>
+            </div>
+          </div>
+
+          <!-- Car Visualization -->
+          <div class="car-viz glass">
+            <div class="car-svg-container">
+              <div class="car-body-display" id="carBodyDisplay">
+                <!-- Animated car SVG -->
+                <svg viewBox="0 0 300 140" class="car-top-view">
+                  <defs>
+                    <linearGradient id="carGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#1a1a2e"/>
+                      <stop offset="50%" style="stop-color:#16213e"/>
+                      <stop offset="100%" style="stop-color:#1a1a2e"/>
+                    </linearGradient>
+                    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0.4"/>
+                      <stop offset="100%" style="stop-color:#7b2ff7;stop-opacity:0.2"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Car body -->
+                  <rect x="30" y="40" width="240" height="60" rx="20" fill="url(#carGrad)" stroke="#00d4ff" stroke-width="1.5"/>
+                  <!-- Roof -->
+                  <rect x="80" y="25" width="140" height="45" rx="15" fill="#0f3460" stroke="#7b2ff7" stroke-width="1"/>
+                  <!-- Windshields -->
+                  <rect x="85" y="28" width="55" height="35" rx="8" fill="url(#glassGrad)" opacity="0.9"/>
+                  <rect x="160" y="28" width="55" height="35" rx="8" fill="url(#glassGrad)" opacity="0.9"/>
+                  <!-- Wheels -->
+                  <circle cx="75" cy="42" r="16" fill="#111" stroke="#00d4ff" stroke-width="2" class="wheel" id="wheelFL"/>
+                  <circle cx="75" cy="98" r="16" fill="#111" stroke="#00d4ff" stroke-width="2" class="wheel" id="wheelRL"/>
+                  <circle cx="225" cy="42" r="16" fill="#111" stroke="#7b2ff7" stroke-width="2" class="wheel" id="wheelFR"/>
+                  <circle cx="225" cy="98" r="16" fill="#111" stroke="#7b2ff7" stroke-width="2" class="wheel" id="wheelRR"/>
+                  <!-- Headlights -->
+                  <ellipse cx="38" cy="58" rx="8" ry="5" fill="#fff" opacity="0.1" class="headlight" id="headlightL"/>
+                  <ellipse cx="38" cy="82" rx="8" ry="5" fill="#fff" opacity="0.1" class="headlight" id="headlightR"/>
+                  <!-- Taillights -->
+                  <rect x="258" y="54" width="10" height="8" rx="2" fill="#ff2200" opacity="0.3" id="taillightL"/>
+                  <rect x="258" y="78" width="10" height="8" rx="2" fill="#ff2200" opacity="0.3" id="taillightR"/>
+                  <!-- Engine glow -->
+                  <ellipse cx="43" cy="70" rx="12" ry="20" fill="#00d4ff" opacity="0" class="engine-glow" id="engineGlow"/>
+                </svg>
+              </div>
+              <div class="car-status-overlay" id="carStatusOverlay">
+                <span class="car-status-text" id="carStatusText">⚡ MOTOR OPRIT</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Controls -->
+          <div class="remote-controls">
+            <!-- Start/Stop -->
+            <div class="control-main-btn-wrap">
+              <button class="remote-start-btn" id="remoteStartBtn" onclick="remoteEngine()">
+                <div class="rsb-ring"></div>
+                <div class="rsb-inner">
+                  <span class="rsb-icon" id="rsbIcon">▶</span>
+                  <span class="rsb-text" id="rsbText">PORNEȘTE<br>MOTORUL</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Lock/Unlock + Other -->
+            <div class="control-grid">
+              <button class="ctrl-btn glass" id="btnLock" onclick="remoteLock()">
+                <span class="ctrl-icon" id="lockIcon">🔒</span>
+                <span class="ctrl-label" id="lockLabel">Blochează</span>
+              </button>
+              <button class="ctrl-btn glass" onclick="remoteHonk()">
+                <span class="ctrl-icon">📢</span>
+                <span class="ctrl-label">Claxon</span>
+              </button>
+              <button class="ctrl-btn glass" onclick="remoteClimate()">
+                <span class="ctrl-icon" id="climateIcon">❄️</span>
+                <span class="ctrl-label">Climatizare</span>
+              </button>
+              <button class="ctrl-btn glass" onclick="remoteLights()">
+                <span class="ctrl-icon" id="lightsIcon">💡</span>
+                <span class="ctrl-label" id="lightsLabel">Faruri</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hardware Info Banner -->
+          <div class="hw-banner glass">
+            <div class="hw-banner-icon">🔌</div>
+            <div class="hw-banner-text">
+              <strong>Vrei control REAL al mașinii?</strong>
+              <p>Cumpără un modul <strong>ESP32 + releu</strong> (~150 RON) și îl conectăm la aprindere. Eu îți scriu firmware-ul!</p>
+            </div>
+            <button class="hw-banner-btn" onclick="showESP32Guide()">Cum?</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- === TAB: TRIP === -->
+      <div class="tab-content" id="tabTrip">
+        <div class="trip-container">
+          <div class="trip-controls">
+            <button class="trip-btn glass" id="tripStartBtn" onclick="toggleTrip()">
+              <span id="tripBtnIcon">▶️</span>
+              <span id="tripBtnText">Start Trip</span>
+            </button>
+            <button class="trip-btn glass" onclick="clearTrip()">🗑️ Reset</button>
+          </div>
+
+          <!-- Live Trip Stats -->
+          <div class="trip-live glass" id="tripLive">
+            <div class="trip-stat-big">
+              <div class="tsb-val" id="tripKmVal">0.0</div>
+              <div class="tsb-unit">km</div>
+              <div class="tsb-label">Distanță</div>
+            </div>
+            <div class="trip-stat-row">
+              <div class="tsr-item">
+                <div class="tsr-val" id="tripTimeVal">00:00</div>
+                <div class="tsr-label">Durată</div>
+              </div>
+              <div class="tsr-item">
+                <div class="tsr-val" id="tripAvgSpeedVal">0</div>
+                <div class="tsr-label">Viteză medie</div>
+              </div>
+              <div class="tsr-item">
+                <div class="tsr-val" id="tripMaxSpeedVal">0</div>
+                <div class="tsr-label">Viteză max</div>
+              </div>
+              <div class="tsr-item">
+                <div class="tsr-val" id="tripEcoVal">--</div>
+                <div class="tsr-label">Eco Score</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Driving Behavior -->
+          <div class="behavior-card glass">
+            <h3>🧠 Comportament Condus</h3>
+            <div class="behavior-grid">
+              <div class="beh-item">
+                <div class="beh-bar-wrap"><div class="beh-bar good" id="behSmooth" style="width:100%"></div></div>
+                <div class="beh-row"><span>Accelerare lină</span><span id="behSmoothPct">100%</span></div>
+              </div>
+              <div class="beh-item">
+                <div class="beh-bar-wrap"><div class="beh-bar warn" id="behBraking" style="width:100%"></div></div>
+                <div class="beh-row"><span>Frânare blândă</span><span id="behBrakingPct">100%</span></div>
+              </div>
+              <div class="beh-item">
+                <div class="beh-bar-wrap"><div class="beh-bar info" id="behSpeed" style="width:100%"></div></div>
+                <div class="beh-row"><span>Viteză optimă (80-100)</span><span id="behSpeedPct">100%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events Log -->
+          <div class="events-card glass">
+            <h3>📋 Evenimente Trip</h3>
+            <div class="events-list" id="eventsList">
+              <div class="event-empty">Pornește un trip pentru a înregistra evenimente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === TAB: SETTINGS === -->
+      <div class="tab-content" id="tabSettings">
+        <div class="settings-container">
+          <h2 class="settings-title">⚙️ Setări</h2>
+
+          <div class="settings-section glass">
+            <h3>🚗 Mașina mea</h3>
+            <div class="form-group">
+              <label>Marcă</label>
+              <select id="sBrand" onchange="saveSettings()">
+                <option value="BMW">BMW</option>
+                <option value="Mercedes">Mercedes-Benz</option>
+                <option value="Opel">Opel</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Model</label>
+              <input type="text" id="sModel" placeholder="ex: 320d, C220d" oninput="saveSettings()" />
+            </div>
+            <div class="form-group">
+              <label>An fabricație</label>
+              <input type="number" id="sYear" placeholder="2018" oninput="saveSettings()" />
+            </div>
+            <div class="form-group">
+              <label>Capacitate rezervor (L)</label>
+              <input type="number" id="sTankSize" placeholder="60" oninput="saveSettings()" />
+            </div>
+            <div class="form-group">
+              <label>Consum mediu declarat (L/100km)</label>
+              <input type="number" id="sDeclaredCons" placeholder="6.0" step="0.1" oninput="saveSettings()" />
+            </div>
+            <div class="form-group">
+              <label>Consum mediu real (L/100km)</label>
+              <input type="number" id="sRealCons" placeholder="7.2" step="0.1" oninput="saveSettings()" />
+            </div>
+          </div>
+
+          <div class="settings-section glass">
+            <h3>⛽ Combustibil curent</h3>
+            <div class="form-group">
+              <label>Nivel rezervor (%)</label>
+              <input type="range" id="sFuelLevel" min="0" max="100" value="50" oninput="updateFuelDisplay(); saveSettings()" />
+              <div class="range-display" id="sFuelLevelDisplay">50%</div>
+            </div>
+            <div class="form-group">
+              <label>Preț motorină (RON/L)</label>
+              <input type="number" id="sFuelPrice" placeholder="7.25" step="0.01" oninput="saveSettings()" />
+            </div>
+          </div>
+
+          <div class="settings-section glass">
+            <h3>🔔 Notificări & Asistent</h3>
+            <div class="toggle-row">
+              <span>Avertizări vocale condus</span>
+              <label class="toggle"><input type="checkbox" id="sVoiceAlerts" checked onchange="saveSettings()"/><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <span>Notificări viteză</span>
+              <label class="toggle"><input type="checkbox" id="sSpeedAlerts" checked onchange="saveSettings()"/><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <span>Mod HUD (ecran pe bord)</span>
+              <label class="toggle"><input type="checkbox" id="sHUDMode" onchange="saveSettings()"/><span class="slider"></span></label>
+            </div>
+            <div class="form-group">
+              <label>Limită viteză alertă (km/h)</label>
+              <input type="number" id="sSpeedLimit" placeholder="130" oninput="saveSettings()" />
+            </div>
+          </div>
+
+          <div class="settings-section glass">
+            <h3>🌐 Conexiune ESP32 (Remote Start Real)</h3>
+            <div class="form-group">
+              <label>IP / Adresă ESP32</label>
+              <input type="text" id="sEspIP" placeholder="192.168.1.100" oninput="saveSettings()" />
+            </div>
+            <div class="form-group">
+              <label>Port WebSocket</label>
+              <input type="number" id="sEspPort" placeholder="81" oninput="saveSettings()" />
+            </div>
+            <button class="btn-test-conn" onclick="testESPConnection()">🔌 Testează Conexiunea</button>
+          </div>
+
+          <div class="settings-version">AutoPilot AI v2.0 • Diesel Edition 🚗</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Fuel Update Modal -->
+  <div class="modal-overlay" id="fuelModal" style="display:none">
+    <div class="modal glass">
+      <h2>⛽ Actualizare Combustibil</h2>
+      <div class="form-group">
+        <label>Nivel rezervor (%)</label>
+        <input type="range" id="mFuelLevel" min="0" max="100" value="50" oninput="document.getElementById('mFuelDisplay').textContent=this.value+'%'" />
+        <div class="range-display" id="mFuelDisplay">50%</div>
+      </div>
+      <div class="form-group">
+        <label>Preț motorină (RON/L)</label>
+        <input type="number" id="mFuelPrice" placeholder="7.25" step="0.01" />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-secondary" onclick="closeFuelModal()">Anulează</button>
+        <button class="btn-primary" onclick="saveFuel()">✅ Salvează</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESP32 Guide Modal -->
+  <div class="modal-overlay" id="espModal" style="display:none">
+    <div class="modal glass esp-modal">
+      <h2>🔌 Ghid Hardware ESP32</h2>
+      <div class="esp-steps">
+        <div class="esp-step">
+          <div class="esp-step-num">1</div>
+          <div class="esp-step-text">
+            <strong>Cumpără de pe eMag:</strong><br>
+            • ESP32 Development Board (~45 RON)<br>
+            • Modul releu 4 canale (~30 RON)<br>
+            • Fire dupont + carcasă
+          </div>
+        </div>
+        <div class="esp-step">
+          <div class="esp-step-num">2</div>
+          <div class="esp-step-text">
+            <strong>Conectare la aprindere:</strong><br>
+            • Releul se conectează în paralel cu butonul de start<br>
+            • ESP32 controlează releul prin WiFi
+          </div>
+        </div>
+        <div class="esp-step">
+          <div class="esp-step-num">3</div>
+          <div class="esp-step-text">
+            <strong>Firmware (îl scriu eu):</strong><br>
+            • WebSocket server pe ESP32<br>
+            • App-ul tău se conectează și controlează totul
+          </div>
+        </div>
+        <div class="esp-step">
+          <div class="esp-step-num">4</div>
+          <div class="esp-step-text">
+            <strong>Cost total: ~150-200 RON</strong><br>
+            Funcționează de oriunde din lume cu internet! 🌍
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="closeESPModal(); showTab('tabSettings', document.getElementById('navSettings'))">
+        ⚙️ Configurează conexiunea
+      </button>
+      <button class="btn-secondary" onclick="closeESPModal()">Închide</button>
+    </div>
+  </div>
+
+  <!-- Voice Overlay -->
+  <div class="voice-overlay" id="voiceOverlay" style="display:none">
+    <div class="voice-animation">
+      <div class="voice-ring v1"></div>
+      <div class="voice-ring v2"></div>
+      <div class="voice-ring v3"></div>
+      <div class="voice-icon">🎤</div>
+    </div>
+    <div class="voice-text" id="voiceText">Ascult...</div>
+    <div class="voice-result" id="voiceResult"></div>
+    <button onclick="stopVoice()">✕ Oprește</button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
